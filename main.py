@@ -7,7 +7,7 @@ Created on Tue Dec 25 00:45:31 2018
 
 import sys
 sys.path.append("struc2vec/src")
-import main as s2v
+import s2v
 class args: 
     input = "data/steam.edgelist";
     output = "output/steam.struc2vec";
@@ -24,4 +24,10 @@ class args:
     OPT2 = True;
     OPT3 = True;
     
-s2v.execs2v(args)
+
+def main():
+    s2v.execs2v(args)
+
+
+if __name__ == '__main__':
+    main()
