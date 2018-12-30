@@ -1,23 +1,10 @@
-Papers/paper-sybil-yang.pdf
-Extraindo edge list.ipynb
-Projeção de rede com struc2vec.ipynb
-RUN NOTEBOOK.bat
-RUN NOTEBOOK - WORK.bat
-Relatório Projeto Final.gdoc
-final.pyc
-guia de projeto.gdoc
-main.pyc
-random_walks.txt
-struc2vec
-.ipynb_checkpoints/Extraindo edge list-checkpoint.ipynb
-.ipynb_checkpoints/Projeção de rede com struc2vec-checkpoint.ipynb
-.vscode/launch.json
-.vscode/settings.json
-Papers/1704.03165.pdf
-Papers/2015-boshmaf-ndss.pdf
-Papers/clustering.pdf
-Papers/paper-aiding-qiang.pdf
-Papers/struc2vec.pdf
-__pycache__/main.cpython-36.pyc
-data/steam_users_json.txt
-struc2vec
+﻿tcc
+data
+cao.mp4
+*.ipynb
+*.pdf
+*.pyc
+*.bat
+*.gdoc
+*.txt
+*.json
