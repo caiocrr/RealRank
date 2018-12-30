@@ -20,4 +20,6 @@ Papers/paper-aiding-qiang.pdf
 Papers/struc2vec.pdf
 __pycache__/main.cpython-36.pyc
 data/steam_users_json.txt
-struc2vec
+struc2vec.log
+struc2vec_.log
+output/steam_all.struc2vec
