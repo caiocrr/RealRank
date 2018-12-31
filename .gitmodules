@@ -1,3 +1,6 @@
 [submodule "struc2vec"]
 	path = struc2vec
 	url = https://github.com/caiocrr/struc2vec
+[submodule "node2vec"]
+	path = node2vec
+	url = https://github.com/caiocrr/snap
