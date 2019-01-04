@@ -23,6 +23,8 @@ class args:
     OPT1 = True; #importante
     OPT2 = True; #importante
     OPT3 = True; #importante
+    pcommonf = 0.5;
+    
     
 
 def main():
@@ -30,6 +32,9 @@ def main():
     # G = s2v.read_graph(args)
     # G = s2v.struc2vec.Graph(G, args.directed, args.workers, untilLayer = None)
     # G.simulate_walks(args.num_walks, args.walk_length)
+    # G = s2v.read_graph(args)
+    # G = s2v.struc2vec.Graph(G, args.directed, args.workers, untilLayer = args.until_layer)
+    # G.preprocess_neighbors_with_bfs_compact()
 
     #s2v.learn_embeddings(args)
 
