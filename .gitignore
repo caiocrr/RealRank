@@ -19,3 +19,5 @@ data
 *.json
 
 nav_steam_accounts
+
+.log
