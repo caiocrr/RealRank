@@ -19,10 +19,10 @@ def parse_args():
 	parser = argparse.ArgumentParser(description="Run struc2vec.")
 
 	parser.add_argument('--input', nargs='?', default='social_networks/social_network.edgelist',
-	                    help='Input graph path', required=True)
+	                    help='Input graph path')
 	
 	parser.add_argument('--train', nargs='?', default='social_networks/social_network.train',
-	                    help='Input graph path', required=True)
+	                    help='Input graph path')
 
 	parser.add_argument('--output', nargs='?', default='social_networks/social_network.struc2vec',
 	                    help='Embeddings path')
@@ -30,14 +30,14 @@ def parse_args():
 	parser.add_argument('--dimensions', type=int, default=32,
 	                    help='Number of dimensions. Default is 32.')
 
-	parser.add_argument('--walk-length', type=int, default=20,
-	                    help='Length of walk per source. Default is 20.')
+	parser.add_argument('--walk-length', type=int, default=80,
+	                    help='Length of walk per source. Default is 80.')
 
 	parser.add_argument('--num-walks', type=int, default=10,
 	                    help='Number of walks per source. Default is 10.')
 
-	parser.add_argument('--window-size', type=int, default=5,
-                    	help='Context size for optimization. Default is 5.')
+	parser.add_argument('--window-size', type=int, default=10,
+                    	help='Context size for optimization. Default is 10.')
 
 	parser.add_argument('--until-layer', type=int, default=2,
                     	help='Calculation until the layer. Default is 2')
