@@ -20,4 +20,6 @@ data
 
 nav_steam_accounts
 
-.log
+*.log
+
+output
