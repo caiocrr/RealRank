@@ -4,8 +4,6 @@ data
 
 *.mp4
 
-*.ipynb
-
 *.pdf
 
 *.pyc
