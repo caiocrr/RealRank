@@ -10,8 +10,8 @@ def set_classification(input, train):
         df_train = pd.read_csv(train, sep=' ', header=None, index_col=0).sort_index()
         df_train.columns = ['confiavel']
         df_train = pd.concat([df, df_train], axis=1, join='inner')
-        X = df_train.loc[:, [1,2]].values
         y = df_train.loc[:, 'confiavel'].values
+        X = df_train.drop(['confiavel'], axis=1)
         lr = LogisticRegression(random_state=0, solver='lbfgs').fit(X,y)
         return lr.predict_proba(df)
 
