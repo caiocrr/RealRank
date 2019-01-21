@@ -11,6 +11,8 @@ import s2v
 import learning
 import argparse, logging
 import algorithms_distances as ad
+import numpy as np
+import operator
 
 def parse_args():
 	'''
@@ -55,7 +57,10 @@ def parse_args():
 	
 	parser.add_argument('--pcommonf', type=float, default=0.5, 
 						help='Weight to set initial state of Sybil Rank: 0 for 100% degree similarity and 1 for 100% common friends similarity. Default is 0.5.')
-
+	
+	parser.add_argument('--pfinal', type=float, default=0.5, 
+						help='Weight to set the importance of the Logistic Regression Classification for the final result. P=1 for 100% logistic regression.')
+		
 	parser.add_argument('--OPT1', default=True, type=bool,
                       help='optimization 1. Default is True')
 	parser.add_argument('--OPT2', default=True, type=bool,
@@ -64,12 +69,30 @@ def parse_args():
                       help='optimization 3. Default is True')	 
 	return parser.parse_args()
 
+def save_result(result):
+	with open('social_networks/social_network.realrank', 'w') as f:
+		for i in result:
+			f.write(str(i[0]) + ' ' + str(i[1]) + '\n')
+
+def convertToVertexDict(prob):
+	return {k+1:v for k,v in enumerate(prob)}
+
+def normalizar_proba(prob):
+	v_a = [v for k,v in prob.items()]
+	max_v = max(v_a)
+	min_v = min(v_a)
+	return {k: (v-min_v) / (max_v - min_v) for k,v in prob.items()}
+	
+
 def main(args):
-	s2v.execs2v(args)
-	learning.set_classification(args.output, args.train)
-	learning.sybil_rank()
-
-
+	G = s2v.execs2v(args)
+	c_proba = learning.set_classification(args.output, args.train).T[1]
+	c_proba = convertToVertexDict(c_proba)
+	final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
+	final_proba = normalizar_proba(final_proba)
+	final_proba = sorted(final_proba.items(), key=operator.itemgetter(1), reverse=True)
+	#print('Normalizado', final_proba) 
+	save_result(final_proba)
 
     #region to debug==
     # weights_distances_r = ad.restoreVariableFromDisk('distances-r-'+str(1))
