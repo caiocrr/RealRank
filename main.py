@@ -20,13 +20,16 @@ def parse_args():
 	'''
 	parser = argparse.ArgumentParser(description="Run struc2vec.")
 
-	parser.add_argument('--input', nargs='?', default='social_networks/social_network.edgelist',
+	parser.add_argument('--input', nargs='?', default='social_networks/degrees/social_network.edgelist',
 	                    help='Input graph path')
 	
-	parser.add_argument('--train', nargs='?', default='social_networks/social_network.train',
+	parser.add_argument('--train', nargs='?', default='social_networks/degrees/social_network.train',
 	                    help='Input graph path')
 
-	parser.add_argument('--output', nargs='?', default='social_networks/social_network.struc2vec',
+	parser.add_argument('--output', nargs='?', default='social_networks/degrees/social_network.struc2vec',
+	                    help='Embeddings path')
+
+	parser.add_argument('--output-rank', nargs='?', default='social_networks/degrees/social_network.realrank',
 	                    help='Embeddings path')
 
 	parser.add_argument('--dimensions', type=int, default=32,
@@ -69,8 +72,8 @@ def parse_args():
                       help='optimization 3. Default is True')	 
 	return parser.parse_args()
 
-def save_result(result):
-	with open('social_networks/social_network.realrank', 'w') as f:
+def save_result(result, dir):
+	with open(dir, 'w') as f:
 		for i in result:
 			f.write(str(i[0]) + ' ' + str(i[1]) + '\n')
 
@@ -92,7 +95,7 @@ def main(args):
 	final_proba = normalizar_proba(final_proba)
 	final_proba = sorted(final_proba.items(), key=operator.itemgetter(1), reverse=True)
 	#print('Normalizado', final_proba) 
-	save_result(final_proba)
+	save_result(final_proba, args.output_rank)
 
     #region to debug==
     # weights_distances_r = ad.restoreVariableFromDisk('distances-r-'+str(1))
