@@ -13,7 +13,8 @@ def set_classification(input, train):
         y = df_train.loc[:, 'confiavel'].values
         X = df_train.drop(['confiavel'], axis=1)
         lr = LogisticRegression(random_state=0, solver='lbfgs', class_weight='balanced').fit(X,y)
-        return lr.predict_proba(df)
+        result = pd.DataFrame(lr.predict_proba(df).T[1], index=df.index).to_dict()[0]
+        return result
 
 def sybil_rank(G, init_p, p_lr_syb):
         G = G.G
