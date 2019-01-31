@@ -3,17 +3,31 @@ import numpy as np
 import json
 import operator
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier as KNN
+from sklearn.svm import SVC
 from math import log, floor
 
-def set_classification(input, train):
+def set_classification(input, train, args):
         df = pd.read_csv(input, skiprows=1, sep=' ', header=None, index_col=0).sort_index()
         df_train = pd.read_csv(train, sep=' ', header=None, index_col=0).sort_index()
         df_train.columns = ['confiavel']
         df_train = pd.concat([df, df_train], axis=1, join='inner')
         y = df_train.loc[:, 'confiavel'].values
         X = df_train.drop(['confiavel'], axis=1)
-        lr = LogisticRegression(random_state=0, solver='lbfgs', class_weight='balanced').fit(X,y)
-        result = pd.DataFrame(lr.predict_proba(df).T[1], index=df.index).to_dict()[0]
+        result = None
+        if (args.model == "knn"):
+                nneigh = args.nneigh
+                knn = KNN(n_neighbors=nneigh).fit(X,y)
+                result = pd.DataFrame(knn.predict(df).T, index=df.index).to_dict()[0]
+        elif(args.model == "svm"):
+                C = args.C
+                kernel = args.kernel
+                svm = SVC(C=C, random_state=0, kernel=kernel, class_weight='balanced').fit(X,y)
+                result = pd.DataFrame(svm.predict(df).T, index=df.index).to_dict()[0]
+        else:
+                lr = LogisticRegression(random_state=0, solver='lbfgs', class_weight='balanced').fit(X,y)
+                result = pd.DataFrame(lr.predict_proba(df).T[1], index=df.index).to_dict()[0]
+        
         return result
 
 def sybil_rank(G, init_p, p_lr_syb):

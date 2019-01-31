@@ -63,7 +63,19 @@ def parse_args():
 	
 	parser.add_argument('--pfinal', type=float, default=0.5, 
 						help='Weight to set the importance of the Logistic Regression Classification for the final result. P=1 for 100% logistic regression.')
-		
+
+	parser.add_argument('--model', nargs='?', default='lr', 
+						help='Classification model. Options: Logistic Regression (lr), K-Nearest-Neighbors (knn) and SVM (svm). Default is LR.')
+	
+	parser.add_argument('--nneigh', type=int, default=5, 
+						help='Number of Nearest Neighbors of KNN model. Default is 5.')
+
+	parser.add_argument('--kernel', nargs='?', default='rbf', 
+						help='Kernel to use on SVM Classifier. Options: Linear(lin), Polynomial (poly), Radius Basis Function (rbf). Default is RBF.')
+
+	parser.add_argument('--C', type=float, default=1.0,
+						help='Penalty parameter of the error term of SVM Classifier')
+
 	parser.add_argument('--OPT1', default=True, type=bool,
                       help='optimization 1. Default is True')
 	parser.add_argument('--OPT2', default=True, type=bool,
@@ -91,7 +103,7 @@ def main(args):
 	G = s2v.execs2v(args)
 	#G = s2v.read_graph(args)
 	#G = s2v.struc2vec.Graph(G, args.directed, args.workers)
-	c_proba = learning.set_classification(args.output, args.train)
+	c_proba = learning.set_classification(args.output, args.train, args)
 	final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
 	final_proba = normalizar_proba(final_proba)
 	final_proba = sorted(final_proba.items(), key=operator.itemgetter(1), reverse=True)
