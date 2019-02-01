@@ -76,6 +76,9 @@ def parse_args():
 	parser.add_argument('--C', type=float, default=1.0,
 						help='Penalty parameter of the error term of SVM Classifier')
 
+	parser.add_argument('--calculated-distances', type=bool, default=False,
+						help='Set True to utilize the previous calculated similarity between vertices. This is the biggest part of execution.')
+
 	parser.add_argument('--OPT1', default=True, type=bool,
                       help='optimization 1. Default is True')
 	parser.add_argument('--OPT2', default=True, type=bool,
