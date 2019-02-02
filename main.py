@@ -32,8 +32,8 @@ def parse_args():
 	parser.add_argument('--output-rank', nargs='?', default='social_networks/common_friends/social_network.realrank',
 	                    help='Embeddings path')
 
-	parser.add_argument('--dimensions', type=int, default=32,
-	                    help='Number of dimensions. Default is 32.')
+	parser.add_argument('--dimensions', type=int, default=128,
+	                    help='Number of dimensions. Default is 128.')
 
 	parser.add_argument('--walk-length', type=int, default=80,
 	                    help='Length of walk per source. Default is 80.')
