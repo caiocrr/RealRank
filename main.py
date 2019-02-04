@@ -11,8 +11,12 @@ import s2v
 import learning
 import argparse, logging
 import algorithms_distances as ad
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import operator
+import copy
+
+logging.basicConfig(filename='struc2vec.log',filemode='w',level=logging.DEBUG,format='%(asctime)s %(message)s')
 
 def parse_args():
 	'''
@@ -99,19 +103,15 @@ def normalizar_proba(prob):
 	v_a = [v for k,v in prob.items()]
 	max_v = max(v_a)
 	min_v = min(v_a)
-	return {k: (v-min_v) / (max_v - min_v) for k,v in prob.items()}
+	if((max_v - min_v) > 0):
+		return {k: (v-min_v) / (max_v - min_v) for k,v in prob.items()}
+	return prob
 	
 
 def main(args):
 	G = s2v.execs2v(args)
-	#G = s2v.read_graph(args)
-	#G = s2v.struc2vec.Graph(G, args.directed, args.workers)
-	c_proba = learning.set_classification(args.output, args.train, args)
-	final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
-	final_proba = normalizar_proba(final_proba)
-	final_proba = sorted(final_proba.items(), key=operator.itemgetter(1), reverse=True)
-	#print('Normalizado', final_proba) 
-	save_result(final_proba, args.output_rank)
+	start(args)
+	
 
     #region to debug==
     # weights_distances_r = ad.restoreVariableFromDisk('distances-r-'+str(1))
@@ -130,6 +130,62 @@ def main(args):
     # G.preprocess_neighbors_with_bfs_compact()
     # s2v.learn_embeddings(args)
 
+
+
+
+def start(args):
+	logging.info("Classificando " + args.output_rank)
+	
+	G = s2v.read_graph(args)
+	G = s2v.struc2vec.Graph(G, args.directed, args.workers)
+	c_proba = learning.set_classification(args)
+	final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
+	final_proba = normalizar_proba(final_proba)
+	final_proba = sorted(final_proba.items(), key=operator.itemgetter(1), reverse=True)
+	#print('Normalizado', final_proba) 
+	save_result(final_proba, args.output_rank)
+
+
+def test_models(args):
+	with ProcessPoolExecutor(max_workers=args.workers) as executor:
+		outputs = ["steam_0", "steam_025", "steam_05", "steam_075", "steam_1"]
+		pfinals = [0, 0.25, 0.5, 0.75, 1]
+		# models = ["lr", "svm", "knn"]
+		params_C = [0.01, 0.1, 1] 
+		params_kernel = ["rbf", "poly", "linear"] 
+		params_neigh = [3,5,7,11] 
+		for output in outputs:
+			args.output = "data/"+output+".struc2vec"
+			for pfinal in pfinals:
+				args.pfinal = pfinal
+				args.model = "lr"
+				args.output_rank = "data/"+output+"_"+str(args.pfinal)+"_model_"+args.model+".realrank"
+				lr_args = copy.deepcopy(args)
+				executor.submit(start,lr_args)
+				#start(args)
+
+				args.model = "svm"
+				for c in params_C:
+					args.C = c
+					for kernel in params_kernel:
+						args.kernel = kernel
+						args.output_rank = "data/"+output+"_"+str(args.pfinal)+"_model_"+args.model+"_C_"+str(args.C)+ "_kernel_"+str(args.kernel)+".realrank"
+						svm_args =  copy.deepcopy(args)
+						executor.submit(start,svm_args)
+						#start(args)
+						
+				args.model = "knn"
+				for neigh in params_neigh:
+					args.nneigh = neigh
+					args.output_rank = "data/"+output+"_"+str(args.pfinal)+"_model_"+args.model+"_nneigh_"+str(args.nneigh)+".realrank"
+					knn_args =  copy.deepcopy(args)
+					executor.submit(start,knn_args)
+					#start(args)
+
+
+
 if __name__ == '__main__':
 	args = parse_args()
 	main(args)
+
+
