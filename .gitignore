@@ -21,3 +21,6 @@ nav_steam_accounts
 *.log
 
 output
+
+*.edgelist
+*.train
