@@ -44,8 +44,8 @@ def set_classification(args, X,y, df, folds=1):
                 kf = KFold(n_splits=folds, shuffle=True)
                 fold = 1
                 for train_index, test_index in kf.split(X):
-                        X_fold = X.loc[train_index].dropna()
-                        y_fold = y.loc[train_index].dropna()
+                        X_fold = X.iloc[train_index, :].dropna()
+                        y_fold = y.iloc[train_index].dropna()
                         logging.info('Iniciando classificacao da rede com fold {}'.format(fold))
                         result = exec_class(X_fold, y_fold, df, args)
                         
