@@ -15,6 +15,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import operator
 import copy
+from sklearn.metrics import f1_score, balanced_accuracy_score
 
 logging.basicConfig(filename='struc2vec.log',filemode='w',level=logging.DEBUG,format='%(asctime)s %(message)s')
 
@@ -91,8 +92,9 @@ def parse_args():
                       help='optimization 3. Default is True')	 
 	return parser.parse_args()
 
-def save_result(result, dir):
+def save_result(result, dir, cv_score):
 	with open(dir, 'w') as f:
+		f.write(str(cv_score) + '\n')
 		for i in result:
 			f.write(str(i[0]) + ' ' + str(i[1]) + '\n')
 
@@ -108,8 +110,20 @@ def normalizar_proba(prob):
 	return prob
 	
 
+def start(args):
+	logging.info("Classificando " + args.output_rank)
+	
+	G = s2v.read_graph(args)
+	G = s2v.struc2vec.Graph(G, args.directed, args.workers)
+
+	X,y,df = learning.load_df(args)
+	cv_score = calc_cv_score(G, X,y,df, args)
+	final_result(G, X,y,df, args, cv_score)
+
+
+
 def main(args):
-	G = s2v.execs2v(args)
+	s2v.execs2v(args)
 	start(args)
 	
 
@@ -132,37 +146,64 @@ def main(args):
 
 
 
-
-def start(args):
-	logging.info("Classificando " + args.output_rank)
-	
-	G = s2v.read_graph(args)
-	G = s2v.struc2vec.Graph(G, args.directed, args.workers)
-	c_proba = learning.set_classification(args)
+def final_result(G, X,y,df, args, cv_score):
+	c_proba = learning.set_classification(args, X, y, df)[0]
 	final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
 	final_proba = normalizar_proba(final_proba)
 	final_proba = sorted(final_proba.items(), key=operator.itemgetter(1), reverse=True)
 	#print('Normalizado', final_proba) 
-	save_result(final_proba, args.output_rank)
+	save_result(final_proba, args.output_rank, cv_score)
+
+def evaluate_score(y_expected, y_predict):
+	max_v = 0
+	max_t = 0
+	logging.info("Evaluating fold...")
+	for t in range(0, 80, 1):
+		i = t*0.001
+		y_predict_t = {k:(1 if v > i else 0) for k,v in y_predict.items() }
+		#print(y_predict)
+		y_predict_t = [y_predict_t[v] for v in y_expected.index]
+		score = balanced_accuracy_score(y_expected, y_predict_t)
+		if (score > max_v):
+			max_v = score
+			max_t = i
+	logging.info("Fold evaluated: {}".format(max_v))
+	return max_v 
+
+def calc_cv_score(G, X,y,df, args):
+	c_probas = learning.set_classification(args, X,y,df, folds=3)
+	cv_score = []
+	for c_proba in c_probas:
+		final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
+		final_proba = normalizar_proba(final_proba)
+		score = evaluate_score(y, final_proba)
+		cv_score.append(score)
+	
+	return np.array(cv_score).mean()
+	
+
+
 
 
 def test_models(args):
 	with ProcessPoolExecutor(max_workers=args.workers) as executor:
 		outputs = ["steam_0", "steam_025", "steam_05", "steam_075", "steam_1"]
-		pfinals = [0, 0.25, 0.5, 0.75, 1]
-		# models = ["lr", "svm", "knn"]
+		pfinals = [0, 0.1, 0.25, 0.35, 0.5, 0.75, 0.9, 1]
 		params_C = [0.01, 0.1, 1] 
-		params_kernel = ["rbf", "poly", "linear"] 
-		params_neigh = [3,5,7,11] 
+		params_kernel = ['linear', 'poly', 'rbf'] 
+		params_neigh = [1, 3, 7, 11] 
 		for output in outputs:
 			args.output = "data/"+output+".struc2vec"
 			for pfinal in pfinals:
 				args.pfinal = pfinal
 				args.model = "lr"
-				args.output_rank = "data/"+output+"_"+str(args.pfinal)+"_model_"+args.model+".realrank"
-				lr_args = copy.deepcopy(args)
-				executor.submit(start,lr_args)
-				#start(args)
+
+				for c in params_C:
+					args.C = c
+					args.output_rank = "data/"+output+"_"+str(args.pfinal)+"_model_"+args.model+"_C_"+str(args.C)+".realrank"
+					lr_args = copy.deepcopy(args)
+					executor.submit(start,lr_args)
+					#start(lr_args)
 
 				args.model = "svm"
 				for c in params_C:
