@@ -8,6 +8,7 @@ from sklearn.neighbors import KNeighborsClassifier as KNN
 from sklearn.svm import SVC
 from math import log, floor
 from sklearn.model_selection import cross_val_score,KFold
+from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
 
 def load_df(args):
         input = args.output #resultado (output) do s2v
@@ -41,16 +42,23 @@ def exec_class(X_fold, y_fold, df, args):
 def set_classification(args, X,y, df, folds=1):
         results = []
         if (folds > 1):
-                kf = KFold(n_splits=folds, shuffle=True)
+                kf = StratifiedKFold(n_splits=folds, shuffle=True)
                 fold = 1
-                for train_index, test_index in kf.split(X):
+                for train_index, test_index in kf.split(X,y):
                         X_fold = X.iloc[train_index, :].dropna()
                         y_fold = y.iloc[train_index].dropna()
                         logging.info('Iniciando classificacao da rede com fold {}'.format(fold))
                         result = exec_class(X_fold, y_fold, df, args)
-                        
+
+
+                        vertices_index_test_index = y.iloc[test_index].index
+
+                        result_with_test_index = {}
+                        result_with_test_index['result'] = result
+                        result_with_test_index['test_index'] = vertices_index_test_index
+
                         logging.info("Fim de classificacao da rede com {}.".format(args.model) )
-                        results.append(result)
+                        results.append(result_with_test_index)
                         fold +=1
         else:
                 X_fold = X
@@ -59,9 +67,35 @@ def set_classification(args, X,y, df, folds=1):
                 
                 result = exec_class(X_fold, y_fold, df, args)
                 
+
+                result_with_test_index = {}
+                result_with_test_index['result'] = result
+                result_with_test_index['test_index'] = None
+                
                 logging.info("Fim de classificacao da rede com {}.".format(args.model) )
-                results.append(result)
+                results.append(result_with_test_index)
        
+        return results
+
+def set_classification_folds(args, X,y, df, train_size):
+        results = []
+        kf = StratifiedShuffleSplit(n_splits=10, test_size=0.1, train_size=train_size)
+        fold = 1
+        for train_index, test_index in kf.split(X,y):
+                        X_fold = X.iloc[train_index, :].dropna()
+                        y_fold = y.iloc[train_index].dropna()
+                        logging.info('Iniciando classificacao da rede com fold {}'.format(fold))
+                        result = exec_class(X_fold, y_fold, df, args)
+
+                        vertices_index_test_index = y.iloc[test_index].index
+
+                        result_with_test_index = {}
+                        result_with_test_index['result'] = result
+                        result_with_test_index['test_index'] = vertices_index_test_index
+
+                        logging.info("Fim de classificacao da rede com {}.".format(args.model) )
+                        results.append(result_with_test_index)
+                        fold +=1
         return results
 
 def sybil_rank(G, init_p, p_lr_syb):

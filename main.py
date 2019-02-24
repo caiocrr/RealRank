@@ -92,11 +92,17 @@ def parse_args():
                       help='optimization 3. Default is True')	 
 	return parser.parse_args()
 
-def save_result(result, dir, cv_score):
+def save_result(result, dir, cv_ba, cv_f1):
+	logging.info("Salvando {} scores: ba: {} f1: {}".format(dir, cv_ba, cv_f1))
 	with open(dir, 'w') as f:
-		f.write(str(cv_score) + '\n')
+		f.write(str(cv_ba) + "," + str(cv_f1) + '\n')
 		for i in result:
 			f.write(str(i[0]) + ' ' + str(i[1]) + '\n')
+
+def save_cv_result(dir, cv_ba, cv_f1):
+	logging.info("Salvando {} scores: ba: {} f1: {}".format(dir, cv_ba, cv_f1))
+	with open(dir+".cv", 'w') as f:
+		f.write(str(cv_ba)+ "," + str(cv_f1))
 
 def convertToVertexDict(prob):
 	return {k:v for k,v in enumerate(prob)}
@@ -113,14 +119,30 @@ def normalizar_proba(prob):
 def start(args):
 	logging.info("Classificando " + args.output_rank)
 	
-	G = s2v.read_graph(args)
-	G = s2v.struc2vec.Graph(G, args.directed, args.workers)
+	try:
+		G = s2v.read_graph(args)
+		G = s2v.struc2vec.Graph(G, args.directed, args.workers)
 
-	X,y,df = learning.load_df(args)
-	cv_score = calc_cv_score(G, X,y,df, args)
-	final_result(G, X,y,df, args, cv_score)
+		X,y,df = learning.load_df(args)
+		cv_ba, cv_f1 = calc_cv_score(G, X,y,df, args)
+		final_result(G, X,y,df, args, cv_ba, cv_f1)
+		#save_cv_result(args.output_rank, cv_ba, cv_f1)
+	except:
+		logging.info('Erro: {}'.format(sys.exc_info()))
+	
 
+def start_cv(args):
+	logging.info("Classificando " + args.output_rank)
+	
+	try:
+		G = s2v.read_graph(args)
+		G = s2v.struc2vec.Graph(G, args.directed, args.workers)
 
+		X,y,df = learning.load_df(args)
+		cv_score = calc_cv_score_compare(G, X,y,df, args)
+		print(cv_score)
+	except:
+		logging.info('Erro: {}'.format(sys.exc_info()))
 
 def main(args):
 	s2v.execs2v(args)
@@ -133,7 +155,7 @@ def main(args):
     # G = s2v.read_graph(args)
     # G = s2v.struc2vec.Graph(G, args.directed, args.workers, untilLayer = None)
     # G.calc_distances(compactDegree = args.OPT1)   
-    # G.create_distances_network()
+    # G.create_distances_network()90
     # G.preprocess_parameters_random_walk()
     # G.simulate_walks(args.num_walks, args.walk_length)
     # G = s2v.read_graph(args)
@@ -146,52 +168,90 @@ def main(args):
 
 
 
-def final_result(G, X,y,df, args, cv_score):
-	c_proba = learning.set_classification(args, X, y, df)[0]
+def final_result(G, X,y,df, args, cv_ba, cv_f1):
+	c_proba = learning.set_classification(args, X, y, df)[0]['result']
 	final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
 	final_proba = normalizar_proba(final_proba)
 	final_proba = sorted(final_proba.items(), key=operator.itemgetter(1), reverse=True)
 	#print('Normalizado', final_proba) 
-	save_result(final_proba, args.output_rank, cv_score)
+	save_result(final_proba, args.output_rank, cv_ba, cv_f1)
 
-def evaluate_score(y_expected, y_predict):
-	max_v = 0
-	max_t = 0
+def evaluate_score(y_expected, y_predict, test_index):
+	max_ba = 0
+	max_f1 = 0
+	max_t_ba = None
+	max_t_f1 = None
+
+	y_expected = y_expected.loc[test_index].sort_index().values
+	y_predict = sorted({k:v for k,v in y_predict.items() if k in test_index}.items(), key=operator.itemgetter(0))
 	logging.info("Evaluating fold...")
-	for t in range(0, 80, 1):
-		i = t*0.001
-		y_predict_t = {k:(1 if v > i else 0) for k,v in y_predict.items() }
-		#print(y_predict)
-		y_predict_t = [y_predict_t[v] for v in y_expected.index]
-		score = balanced_accuracy_score(y_expected, y_predict_t)
-		if (score > max_v):
-			max_v = score
-			max_t = i
-	logging.info("Fold evaluated: {}".format(max_v))
-	return max_v 
+	for i in np.arange(0, 0.5, 0.001):
+		y_predict_t = [(1 if v > i else 0) for k,v in y_predict ]
+		ba = balanced_accuracy_score(np.logical_not(y_expected).astype(int), np.logical_not(y_predict_t).astype(int))
+		f1 = f1_score(np.logical_not(y_expected).astype(int), np.logical_not(y_predict_t).astype(int))
+		if (ba > max_ba):
+			max_ba = ba
+			max_t_ba = i
+			
+		if (f1 > max_f1):
+			max_f1 = f1
+			max_t_f1 = i
+	logging.info("Fold evaluated: ba: {} / f1: {}".format(max_ba, max_f1))
+	return max_ba, max_f1
 
 def calc_cv_score(G, X,y,df, args):
-	c_probas = learning.set_classification(args, X,y,df, folds=3)
-	cv_score = []
-	for c_proba in c_probas:
+	c_probas_with_test_index = learning.set_classification(args, X,y,df, folds=10)
+	cv_ba = []
+	cv_f1 = []
+	for c_proba_with_test_index in c_probas_with_test_index:
+		c_proba = c_proba_with_test_index['result']
+		test_index = c_proba_with_test_index['test_index']
 		final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
 		final_proba = normalizar_proba(final_proba)
-		score = evaluate_score(y, final_proba)
-		cv_score.append(score)
+		ba,f1 = evaluate_score(y, final_proba, test_index)
+		cv_ba.append(ba)
+		cv_f1.append(f1)
 	
-	return np.array(cv_score).mean()
-	
+	return np.array(cv_ba).mean(), np.array(cv_f1).mean()
 
 
+
+def calc_cv_score_compare(G, X,y,df, args):
+	c_probas_with_test_index_01 = learning.set_classification_folds(args, X,y,df, 0.1)
+	c_probas_with_test_index_02 = learning.set_classification_folds(args, X,y,df, 0.2)
+	c_probas_with_test_index_03 = learning.set_classification_folds(args, X,y,df, 0.3)
+	c_probas_with_test_index_05 = learning.set_classification_folds(args, X,y,df, 0.5)
+	c_probas_with_test_index_07 = learning.set_classification_folds(args, X,y,df, 0.7)
+	c_probas_with_test_index_09 = learning.set_classification_folds(args, X,y,df, 0.9)
+
+	c_probas_with_test_index_array = [c_probas_with_test_index_01,c_probas_with_test_index_02,c_probas_with_test_index_03,c_probas_with_test_index_05,c_probas_with_test_index_07,c_probas_with_test_index_09]
+
+	
+	cv_results = []
+	labels = ['01','02','03','05','07','09']
+	for c_probas_with_test_index, label in zip(c_probas_with_test_index_array, labels):
+		cv_ba = []
+		cv_f1 = []
+		for c_proba_with_test_index in c_probas_with_test_index:
+			c_proba = c_proba_with_test_index['result']
+			test_index = c_proba_with_test_index['test_index']
+			final_proba = learning.sybil_rank(G, c_proba, args.pfinal)
+			final_proba = normalizar_proba(final_proba)
+			ba,f1 = evaluate_score(y, final_proba, test_index)
+			cv_ba.append(ba)
+			cv_f1.append(f1)
+	
+		cv_results.append((label, np.array(cv_ba).mean(), np.array(cv_f1).mean()))
+	return cv_results
 
 
 def test_models(args):
 	with ProcessPoolExecutor(max_workers=args.workers) as executor:
 		outputs = ["steam_0", "steam_025", "steam_05", "steam_075", "steam_1"]
-		pfinals = [0, 0.1, 0.25, 0.35, 0.5, 0.75, 0.9, 1]
+		pfinals = [0, 0.25, 0.5, 0.75, 1]
 		params_C = [0.01, 0.1, 1] 
 		params_kernel = ['linear', 'poly', 'rbf'] 
-		params_neigh = [1, 3, 7, 11] 
+		params_neigh = [1, 3, 7] 
 		for output in outputs:
 			args.output = "data/"+output+".struc2vec"
 			for pfinal in pfinals:
@@ -224,9 +284,22 @@ def test_models(args):
 					#start(args)
 
 
+def test_cv(args):
+	#steam_0_0.25_model_svm_C_1_kernel_poly.realrank
+	args.pfinal = 0.75
+	args.output = "data/steam_075.struc2vec"
+	#args.C = 0.01
+	args.model = "knn"
+	args.nneigh = 3
+	args.output_rank = "data/cv/steam_1_"+str(args.pfinal)+"_model_"+args.model+"_C_"+str(args.C)+".realrank"
+	svm_args =  copy.deepcopy(args)
+	start_cv(svm_args)
+	#start(args)
+
 
 if __name__ == '__main__':
 	args = parse_args()
 	main(args)
-
+	#test_models(args)
+	#test_cv(args)
 
