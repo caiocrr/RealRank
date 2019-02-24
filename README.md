@@ -1,2 +1,2 @@
-# FakeRank
-Detecção de usuários não confiáveis em redes de relacionamento
+# RealRank
+Framework para ranqueamento de reputação de usuários em redes sociais online
